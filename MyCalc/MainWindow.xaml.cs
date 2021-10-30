@@ -23,9 +23,12 @@ namespace MyCalc
         double input;
         List<double> numbers;
         List<string> operations;
-        double first;
+        double firstOp;
+        double secondOp;
         bool hasFraction;
         bool isNegative;
+        bool inputFinished;
+        bool operationFinished;
         public MainWindow()
         {
             InitializeComponent();
@@ -34,18 +37,20 @@ namespace MyCalc
             queryField.Clear();
             hasFraction = false;
             isNegative = false;
+            inputFinished = false;
+            operationFinished = true;
             numbers = new List<double>();
             operations = new List<string>();
-            first = 0;
+            firstOp = 0;
         }
 
         private void AddRank(string r)
         {
-            if (inputField.Text=="0" || input == 0)
+            if (inputField.Text=="0" || inputFinished)
                 inputField.Text = r;
             else
                 inputField.Text += r;
-            input = Double.Parse(inputField.Text);
+            inputFinished = false;
         }
 
         // Numbers input
@@ -115,32 +120,52 @@ namespace MyCalc
         // Operations input
         private void plusButton_Click(object sender, RoutedEventArgs e)
         {
-            if (queryField.Text.Length == 0)
+            if (firstOp == 0 || operationFinished)
             {
-                first = Double.Parse(inputField.Text);
+                if (operationFinished)
+                {
+                    queryField.Clear();
+                    operationFinished = false;
+                }
+                queryField.Text += inputField.Text + "+";
+                firstOp = Double.Parse(inputField.Text);
+                inputFinished = true;
             }
-            else if (inputField.Text.Length != 0)
+            else
             {
-                first += Double.Parse(inputField.Text);
-                queryField.Text += first.ToString() + "+";
-                inputField.Text = first.ToString();
+                queryField.Text += inputField.Text + "+";
+                secondOp = Double.Parse(inputField.Text);
+                firstOp = firstOp + secondOp;
+                inputField.Text = firstOp.ToString();
+                inputFinished = true;
+                operationFinished = false;
             }
-            input = 0;
         }
         private void minusButton_Click(object sender, RoutedEventArgs e)
         {
-            if (queryField.Text.Length == 0)
+            if (true)
             {
-                queryField.Text = "-";
-                first = Double.Parse(inputField.Text);
+                if (firstOp == 0 || operationFinished)
+                {
+                    if (operationFinished)
+                    {
+                        queryField.Clear();
+                        operationFinished = false;
+                    }
+                    queryField.Text += inputField.Text + "-";
+                    firstOp = Double.Parse(inputField.Text);
+                    inputFinished = true;
+                }
+                else
+                {
+                    queryField.Text += inputField.Text + "-";
+                    secondOp = Double.Parse(inputField.Text);
+                    firstOp = firstOp - secondOp;
+                    inputField.Text = firstOp.ToString();
+                    inputFinished = true;
+                    operationFinished = false;
+                }
             }
-            else if (inputField.Text.Length!=0)
-            {
-                first -= Double.Parse(inputField.Text);                
-                queryField.Text += first.ToString() + "-";
-                inputField.Text = first.ToString();
-            }
-            input = 0;
         }
         private void multiplyButton_Click(object sender, RoutedEventArgs e)
         {
@@ -155,7 +180,12 @@ namespace MyCalc
         // Commands input
         private void equalButton_Click(object sender, RoutedEventArgs e)
         {
-
+            queryField.Text += inputField.Text + "=";
+            secondOp = Double.Parse(inputField.Text);
+            firstOp = firstOp + secondOp;
+            inputField.Text = firstOp.ToString();
+            inputFinished = true;
+            operationFinished = true;
         }
 
         private void ceButton_Click(object sender, RoutedEventArgs e)
@@ -167,6 +197,8 @@ namespace MyCalc
         {
             inputField.Text="0";
             queryField.Clear();
+            firstOp = 0;
+            //secondOp = 0;
         }
 
         private void clearButton_Click(object sender, RoutedEventArgs e)
