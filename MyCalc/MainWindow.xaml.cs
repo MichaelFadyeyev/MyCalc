@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Globalization;
 
 namespace MyCalc
 {
@@ -20,37 +21,52 @@ namespace MyCalc
     /// </summary>
     public partial class MainWindow : Window 
     {
-        double input;
-        List<double> numbers;
-        List<string> operations;
-        double firstOp;
-        double secondOp;
-        bool hasFraction;
-        bool isNegative;
-        bool inputFinished;
-        bool operationFinished;
+
+        private double firstOperator;
+        private double secondOperator;
+        private double storedResult;
+
+        private bool inputFinished;
+        private bool operationSet;
+        private bool operationFinished;
+        private bool errorFlag;
+
+        private string currentOperation;
+        private string storedOperation;
+        private string defferedOperation;
+
+        private string nds;
+
         public MainWindow()
+
+
         {
             InitializeComponent();
-            input = 0;
             inputField.Text = "0";
             queryField.Clear();
-            hasFraction = false;
-            isNegative = false;
-            inputFinished = false;
             operationFinished = true;
-            numbers = new List<double>();
-            operations = new List<string>();
-            firstOp = 0;
+            storedOperation = "";
+            defferedOperation = "";
+            nds = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+            dotButton.Content = nds;
         }
 
         private void AddRank(string r)
         {
-            if (inputField.Text=="0" || inputFinished)
+            if (inputField.Text == "0" || inputFinished)
+            {
                 inputField.Text = r;
+                if (errorFlag)
+                {
+                    errorFlag = false;
+                    storedResult = 0;
+                    ClearAll();
+                }
+                operationSet = false;
+                inputFinished = false;
+            }
             else
                 inputField.Text += r;
-            inputFinished = false;
         }
 
         // Numbers input
@@ -101,111 +117,236 @@ namespace MyCalc
 
         private void zeroButton_Click(object sender, RoutedEventArgs e)
         {
-            if (inputField.Text != "0")
-            {
-                inputField.Text += "0";
-            }
 
+            if (inputField.Text != "0" && operationSet == false)
+                inputField.Text += "0";
+            else
+            {
+                inputField.Text = "0";
+                operationSet = false;
+                inputFinished = false;
+            }
         }
 
         private void dotButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (!inputField.Text.Contains(","))
+        {           
+            if (operationSet)
             {
-                inputField.Text +=",";
-                hasFraction = true;
+                inputField.Text = "0" + nds;
+                inputFinished = false;
+                operationSet = false;
+            }
+            else
+            {
+                if (!inputField.Text.Contains(nds))
+                {
+                    inputField.Text += nds;
+                    inputFinished = false;
+                }
             }
         }
 
         // Operations input
         private void plusButton_Click(object sender, RoutedEventArgs e)
         {
-            if (firstOp == 0 || operationFinished)
-            {
-                if (operationFinished)
-                {
-                    queryField.Clear();
-                    operationFinished = false;
-                }
-                queryField.Text += inputField.Text + "+";
-                firstOp = Double.Parse(inputField.Text);
-                inputFinished = true;
-            }
-            else
-            {
-                queryField.Text += inputField.Text + "+";
-                secondOp = Double.Parse(inputField.Text);
-                firstOp = firstOp + secondOp;
-                inputField.Text = firstOp.ToString();
-                inputFinished = true;
-                operationFinished = false;
-            }
+            currentOperation = "+";
+            SetOperands();
         }
         private void minusButton_Click(object sender, RoutedEventArgs e)
         {
-            if (true)
-            {
-                if (firstOp == 0 || operationFinished)
-                {
-                    if (operationFinished)
-                    {
-                        queryField.Clear();
-                        operationFinished = false;
-                    }
-                    queryField.Text += inputField.Text + "-";
-                    firstOp = Double.Parse(inputField.Text);
-                    inputFinished = true;
-                }
-                else
-                {
-                    queryField.Text += inputField.Text + "-";
-                    secondOp = Double.Parse(inputField.Text);
-                    firstOp = firstOp - secondOp;
-                    inputField.Text = firstOp.ToString();
-                    inputFinished = true;
-                    operationFinished = false;
-                }
-            }
+            currentOperation = "-";
+            SetOperands();
         }
         private void multiplyButton_Click(object sender, RoutedEventArgs e)
         {
-
+            currentOperation = "*";
+            SetOperands();
         }
         private void divButton_Click(object sender, RoutedEventArgs e)
         {
-
+            currentOperation = "/";
+            SetOperands();
         }
 
 
         // Commands input
         private void equalButton_Click(object sender, RoutedEventArgs e)
-        {
-            queryField.Text += inputField.Text + "=";
-            secondOp = Double.Parse(inputField.Text);
-            firstOp = firstOp + secondOp;
-            inputField.Text = firstOp.ToString();
+        {            
+            if (!operationFinished)
+            {
+                queryField.Text += inputField.Text + "=";
+                secondOperator = Double.Parse(inputField.Text);
+                if (currentOperation == "*" || currentOperation == "/")
+                {
+                    if (Calculate(currentOperation))
+                    {
+                        if (defferedOperation != "")
+                        {
+                            secondOperator = firstOperator;
+                            firstOperator = storedResult;
+                            storedOperation = defferedOperation;
+                            Calculate(storedOperation);
+                        }
+                        inputField.Text = firstOperator.ToString();
+                    }
+                    else
+                        ErrorCase();
+                }
+                else
+                {
+                    Calculate(currentOperation);
+                    inputField.Text = firstOperator.ToString();
+                }
+            }
+            else
+            {
+                queryField.Text = inputField.Text + currentOperation + secondOperator.ToString() + "=";
+                if (Calculate(currentOperation))
+                    inputField.Text = firstOperator.ToString();
+                else
+                    ErrorCase();
+            }
+            defferedOperation = "";
+            storedOperation = currentOperation;
             inputFinished = true;
             operationFinished = true;
+            operationSet = false;
         }
 
         private void ceButton_Click(object sender, RoutedEventArgs e)
         {
             inputField.Text = "0";
+            secondOperator = Double.Parse(inputField.Text);
         }
 
         private void cButton_Click(object sender, RoutedEventArgs e)
         {
             inputField.Text="0";
-            queryField.Clear();
-            firstOp = 0;
-            //secondOp = 0;
+            firstOperator = 0;
+            ClearAll();
         }
 
         private void clearButton_Click(object sender, RoutedEventArgs e)
         {
-
+            if (!inputFinished && !operationSet)
+            {
+                inputField.Text = inputField.Text.Remove(inputField.Text.Length - 1);
+                if (inputField.Text.Length == 0)
+                    inputField.Text = "0";               
+            }
+            else if (operationFinished)
+            {
+                queryField.Clear();
+                storedOperation = "";
+                currentOperation = "";
+                inputFinished = true;
+            }
         }
 
+        // Calculations
 
+        private void ClearAll()
+        {
+            queryField.Clear();
+            storedOperation = "";
+            currentOperation = "";
+            inputFinished = true;
+            operationFinished = true;
+            operationSet = false;
+        }
+
+        private void SetOperands()
+        {
+            if (operationFinished)
+            {
+                queryField.Clear();
+                firstOperator = Double.Parse(inputField.Text);
+                queryField.Text += inputField.Text + currentOperation;
+            }
+            else
+            {
+                queryField.Text += inputField.Text + currentOperation;
+                //=======================================================
+                if (currentOperation == "*" || currentOperation == "/")
+                {
+
+                    if (storedOperation == "*" || storedOperation == "/")
+                    {
+                        secondOperator = Double.Parse(inputField.Text);
+
+                        if (Calculate(storedOperation))
+                            inputField.Text = firstOperator.ToString();
+                        else
+                            ErrorCase();
+                    }
+                    else
+                    {
+                        storedResult = firstOperator;
+                        defferedOperation = storedOperation;
+                        firstOperator = Double.Parse(inputField.Text);
+                    }
+                }
+                else
+                {
+                    //========================================================
+                    if ((storedOperation == "*" || storedOperation == "/") && defferedOperation != "")
+                    {
+                        secondOperator = Double.Parse(inputField.Text);
+                        if (Calculate(storedOperation))
+                        {
+                            secondOperator = firstOperator;
+                            firstOperator = storedResult;
+                            storedOperation = defferedOperation;
+                        }
+                        else
+                            ErrorCase();
+                    }
+                    else
+                    {
+                        defferedOperation = "";
+                        secondOperator = Double.Parse(inputField.Text);
+                    }
+                    Calculate(storedOperation);
+                    inputField.Text = firstOperator.ToString();
+                }
+            }
+
+            storedOperation = currentOperation;
+            inputFinished = true;
+            operationFinished = false;
+            operationSet = true;
+        }
+
+        private bool Calculate(string o)
+        {
+            switch (o)
+            {
+                case "+":
+                    firstOperator += secondOperator;
+                    return true;
+                case "-":
+                    firstOperator -= secondOperator;
+                    return true;
+                case "*":
+                    firstOperator *= secondOperator;
+                    return true;
+                case "/":
+                    if (secondOperator != 0)
+                    {
+                        firstOperator /= secondOperator;
+                        return true;
+                    }
+                    else
+                        return false;
+                default:
+                    return false;
+            }
+        }
+
+        private void ErrorCase()
+        {
+            errorFlag = true;
+            inputField.Text = "Ділити на нуль не можна";
+        }
     }
 }
